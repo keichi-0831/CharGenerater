@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AAAchar速食小炒批发</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-        <link rel="stylesheet" href="style.css?v=20260310b">
+        <link rel="stylesheet" href="style.css?v=20260827">
 </head>
 <body>
 <div class="container">
@@ -638,12 +638,13 @@
             <div class="export-section">
                 <div class="export-header">
                     <h3>人设卡导出</h3>
-                    <p>自动整合所有内容，空字段跳过</p>
+                    <p>YAML 自动整合表单内容；完整角色卡 JSON 还会内嵌世界书、最近生成的开场白和状态栏正则。</p>
                 </div>
                 <div class="export-buttons">
                     <button type="button" class="btn btn-danger" onclick="clearForm()">清空</button>
                     <button type="button" class="btn btn-normal" onclick="previewYaml()">预览YAML</button>
                     <button type="button" class="btn btn-export-main" onclick="exportYaml()">导出YAML</button>
+                    <button type="button" class="btn btn-export-main" onclick="exportCharacterCardJson()">导出完整角色卡JSON</button>
                 </div>
             </div>
             
@@ -1057,6 +1058,22 @@
                 </div>
 
                 <!-- 导出：世界书 YAML / JSON -->
+                <section class="custom-worldbook-section" aria-labelledby="customWorldbookHeading">
+                    <div class="custom-worldbook-header">
+                        <div>
+                            <h3 id="customWorldbookHeading">自定义世界书条目</h3>
+                            <p>可自由添加默认板块之外的标题与正文。每一项会按这里设置的名称、触发方式和插入参数独立导出。</p>
+                        </div>
+                        <button type="button" class="btn btn-add-custom-worldbook" onclick="addCustomWorldbookEntry()">＋ 添加条目</button>
+                    </div>
+                    <div class="custom-worldbook-ai-notice" role="note">
+                        ⚠️ 自定义世界书只能单方面提供给 AI 参考，AI 无法辅助生成、补写或回填这部分内容。发送时会统一放入
+                        <code>&lt;UserDefined&gt;</code> 标签，并以 Markdown 标题区分各条目。
+                    </div>
+                    <div id="custom-worldbook-container" class="custom-worldbook-container"></div>
+                    <div id="custom-worldbook-empty" class="custom-worldbook-empty">还没有自定义条目，点击“添加条目”开始填写。</div>
+                </section>
+
                 <div class="export-section" style="margin-top:20px;">
                     <div class="export-header">
                         <h3>世界书导出</h3>
@@ -1261,6 +1278,9 @@
                             <input type="checkbox" id="sendWorldbookToAi" checked onchange="scheduleCloudConfigSync()" style="accent-color: var(--primary-color);">
                             将世界书已填写内容一并提供给 AI 参考（会发送当前世界书内容）
                         </label>
+                        <div class="ai-custom-worldbook-notice">
+                            自定义世界书会作为只读参考统一放入 <code>&lt;UserDefined&gt;</code>；AI 无法辅助生成或回填自定义条目。
+                        </div>
                     </div>
 
                     <div class="ai-subtabs">
@@ -1883,12 +1903,13 @@
 
     <script src="js/core/constants.js?v=20260310"></script>
     <script src="js/core/utils.js?v=20260310"></script>
-    <script src="js/character/form.js?v=20260310"></script>
+    <script src="js/character/form.js?v=20260827"></script>
     <script src="js/inspo/inspo.js?v=20260310"></script>
     <script src="js/namer/namer.js?v=20260310"></script>
-    <script src="js/ai/ai.js?v=20260310"></script>
+    <script src="js/ai/ai.js?v=20260827"></script>
     <script src="js/sync/supabase.js?v=20260310"></script>
-    <script src="js/export/yaml.js?v=20260310"></script>
+    <script src="js/export/yaml.js?v=20260827"></script>
+    <script src="js/export/character-card.js?v=20260827"></script>
     <script src="js/core/init.js?v=20260310"></script>
 </body>
 </html>

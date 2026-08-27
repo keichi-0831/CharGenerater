@@ -234,6 +234,21 @@ function generateWorldbookYaml() {
     if (personaCorrection) yaml += `${indent}persona_correction: ${escapeYaml(personaCorrection)}\n`;
     if (stateSpecified) yaml += `${indent}state_specified: ${escapeYaml(stateSpecified)}\n`;
     if (extra) yaml += `${indent}extra: ${escapeYaml(extra)}\n`;
+    const customEntries = typeof collectCustomWorldbookEntries === 'function'
+        ? collectCustomWorldbookEntries().filter(entry => String(entry.content || '').trim())
+        : [];
+    if (customEntries.length) {
+        yaml += `${indent}user_defined:\n`;
+        customEntries.forEach((entry, index) => {
+            const title = String(entry.title || '').trim() || `自定义条目 ${index + 1}`;
+            const contentLines = String(entry.content || '').trim().split(/\r?\n/);
+            yaml += `${indent}${indent}- title: ${escapeYaml(title)}\n`;
+            yaml += `${indent}${indent}${indent}content: |-\n`;
+            contentLines.forEach(line => {
+                yaml += `${indent}${indent}${indent}${indent}${line}\n`;
+            });
+        });
+    }
     yaml += '```';
 
     yaml = applyUserAlias(yaml);
@@ -273,24 +288,36 @@ function buildWorldbookEntry(base) {
     const depthEl = document.getElementById(base.depthId);
     const orderEl = document.getElementById(base.orderId);
 
-    const commentRaw = commentEl ? commentEl.value.trim() : '';
+    const commentRaw = base.comment !== undefined
+        ? String(base.comment || '').trim()
+        : (commentEl ? commentEl.value.trim() : '');
     const comment = commentRaw || base.defaultComment || '';
 
-    const constantStr = constantEl ? constantEl.value.trim() : 'true';
+    const constantStr = base.constant !== undefined
+        ? String(base.constant).trim()
+        : (constantEl ? constantEl.value.trim() : 'true');
     const constant = (constantStr === 'false') ? false : true;
 
-    const keyRaw = keyEl ? keyEl.value.trim() : '';
+    const keyRaw = base.key !== undefined
+        ? String(base.key || '').trim()
+        : (keyEl ? keyEl.value.trim() : '');
     const key = keyRaw
         ? keyRaw.split(/[，,]/).map(s => s.trim()).filter(Boolean)
         : [];
 
-    let position = positionEl ? parseInt(positionEl.value, 10) : 2;
+    let position = base.position !== undefined
+        ? parseInt(base.position, 10)
+        : (positionEl ? parseInt(positionEl.value, 10) : 2);
     if (Number.isNaN(position)) position = 2;
 
-    let depth = depthEl ? parseInt(depthEl.value, 10) : 2;
+    let depth = base.depth !== undefined
+        ? parseInt(base.depth, 10)
+        : (depthEl ? parseInt(depthEl.value, 10) : 2);
     if (Number.isNaN(depth)) depth = 2;
 
-    let order = orderEl ? parseInt(orderEl.value, 10) : 100;
+    let order = base.order !== undefined
+        ? parseInt(base.order, 10)
+        : (orderEl ? parseInt(orderEl.value, 10) : 100);
     if (Number.isNaN(order)) order = 100;
 
     return Object.assign({}, (typeof WORLDBOOK_JSON_DEFAULTS === 'object' ? WORLDBOOK_JSON_DEFAULTS : {}), {
@@ -410,6 +437,22 @@ function buildWorldbookEntriesFromForm() {
         orderId: 'world_extra_order',
         defaultComment: '额外补充'
     });
+
+    // 9. 用户自定义条目：每一项按自己的导出配置生成独立 entry
+    if (typeof collectCustomWorldbookEntries === 'function') {
+        collectCustomWorldbookEntries().forEach((customEntry, customIndex) => {
+            const title = String(customEntry.title || '').trim() || `自定义条目 ${customIndex + 1}`;
+            pushEntry(customEntry.content, {
+                comment: customEntry.comment,
+                constant: customEntry.constant,
+                key: customEntry.key,
+                position: customEntry.position,
+                depth: customEntry.depth,
+                order: customEntry.order,
+                defaultComment: title
+            });
+        });
+    }
 
     return entries;
 }

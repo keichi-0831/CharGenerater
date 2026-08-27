@@ -766,6 +766,27 @@ function buildExistingWorldbookContent() {
     return JSON.stringify({ worldbook: cleaned }, null, 2);
 }
 
+// 用户手写的自定义世界书只作为只读上下文发送，不进入 AI 生成 schema 或回填流程。
+function buildUserDefinedWorldbookForAi() {
+    if (typeof collectCustomWorldbookEntries !== 'function') return '';
+    const entries = collectCustomWorldbookEntries()
+        .map((entry, index) => ({
+            title: String(entry.title || '').trim() || `自定义条目 ${index + 1}`,
+            content: String(entry.content || '').trim()
+        }))
+        .filter(entry => entry.content);
+    if (!entries.length) return '';
+
+    const safeXmlText = text => String(text || '')
+        .replace(/<\/?UserDefined\b/gi, match => match.replace('<', '&lt;'));
+    const markdown = entries.map(entry => {
+        const title = safeXmlText(entry.title).replace(/\r?\n/g, ' ');
+        return `## ${title}\n${safeXmlText(entry.content)}`;
+    }).join('\n\n');
+    const block = `<UserDefined>\n${markdown}\n</UserDefined>\n\n`;
+    return typeof applyUserAlias === 'function' ? applyUserAlias(block) : block;
+}
+
 // 根据复选框状态构建「人设卡 YAML」参考块
 function buildCharCardYamlForAi() {
     const sendChar = !!document.getElementById('sendCharCardToAi')?.checked;
@@ -781,8 +802,10 @@ function buildWorldbookJsonForAi() {
     const sendWorld = !!document.getElementById('sendWorldbookToAi')?.checked;
     if (!sendWorld) return '';
     const worldbookJson = buildExistingWorldbookContent();
-    if (!worldbookJson) return '';
-    return `<worldbook_json>\n以下是当前世界书内容的 JSON，请参考其中的世界观设定和剧情语境，但不要整段抄录：\n${worldbookJson}\n</worldbook_json>\n\n`;
+    const standardBlock = worldbookJson
+        ? `<worldbook_json>\n以下是当前世界书内容的 JSON，请参考其中的世界观设定和剧情语境，但不要整段抄录：\n${worldbookJson}\n</worldbook_json>\n\n`
+        : '';
+    return standardBlock + buildUserDefinedWorldbookForAi();
 }
 
 function updateModulePreview() { updatePromptPreview(); }

@@ -135,6 +135,134 @@ function deleteCharacter() {
     showToast('🗑️ 角色已删除');
 }
 
+function createCustomWorldbookEntryId() {
+    return 'custom_worldbook_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+}
+
+function updateCustomWorldbookEmptyState() {
+    const container = document.getElementById('custom-worldbook-container');
+    const empty = document.getElementById('custom-worldbook-empty');
+    if (!container || !empty) return;
+    empty.style.display = container.children.length ? 'none' : 'block';
+}
+
+function createCustomWorldbookEntryElement(entry = {}) {
+    const item = document.createElement('article');
+    item.className = 'custom-worldbook-entry';
+    item.dataset.entryId = entry.id || createCustomWorldbookEntryId();
+    item.innerHTML = `
+        <div class="custom-worldbook-entry-head">
+            <strong>自定义条目</strong>
+            <button type="button" class="btn btn-danger" data-action="remove-custom-worldbook">删除</button>
+        </div>
+        <div class="form-group">
+            <label>标题</label>
+            <input type="text" data-field="title" placeholder="例如：魔法体系、城市禁令、隐藏组织">
+        </div>
+        <div class="form-group">
+            <label>正文</label>
+            <textarea data-field="content" rows="5" placeholder="填写这个自定义世界书条目的完整内容……"></textarea>
+        </div>
+        <div class="custom-worldbook-config">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>导出条目名称 <span class="optional">（留空则使用标题）</span></label>
+                    <input type="text" data-field="comment" placeholder="默认跟随标题">
+                </div>
+                <div class="form-group">
+                    <label>触发方式</label>
+                    <select data-field="constant">
+                        <option value="true">常量触发（始终生效）</option>
+                        <option value="false">关键词触发</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>关键字（逗号分隔，可留空）</label>
+                    <input type="text" data-field="key" placeholder="例如：魔法, 法术">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>插入位置</label>
+                    <select data-field="position">
+                        <option value="0">0 = 角色描述前</option>
+                        <option value="1">1 = 角色描述后</option>
+                        <option value="2">2 = 示例对话前</option>
+                        <option value="3">3 = 示例对话后</option>
+                        <option value="4">4 = 作者的话/聊天中</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>插入深度</label>
+                    <input type="number" data-field="depth" value="2" min="0">
+                </div>
+                <div class="form-group">
+                    <label>插入顺序</label>
+                    <input type="number" data-field="order" value="100" min="0">
+                </div>
+            </div>
+        </div>`;
+
+    const setValue = (field, value, fallback = '') => {
+        const el = item.querySelector(`[data-field="${field}"]`);
+        if (el) el.value = value !== undefined && value !== null ? String(value) : fallback;
+    };
+    setValue('title', entry.title);
+    setValue('content', entry.content);
+    setValue('comment', entry.comment);
+    setValue('constant', entry.constant, 'true');
+    setValue('key', entry.key);
+    setValue('position', entry.position, '2');
+    setValue('depth', entry.depth, '2');
+    setValue('order', entry.order, '100');
+
+    item.querySelector('[data-action="remove-custom-worldbook"]')?.addEventListener('click', () => {
+        item.remove();
+        updateCustomWorldbookEmptyState();
+        triggerAutoSave();
+    });
+    return item;
+}
+
+function collectCustomWorldbookEntries() {
+    const container = document.getElementById('custom-worldbook-container');
+    if (!container) return [];
+    return Array.from(container.querySelectorAll('.custom-worldbook-entry')).map(item => {
+        const value = field => item.querySelector(`[data-field="${field}"]`)?.value || '';
+        return {
+            id: item.dataset.entryId || createCustomWorldbookEntryId(),
+            title: value('title'),
+            content: value('content'),
+            comment: value('comment'),
+            constant: value('constant') || 'true',
+            key: value('key'),
+            position: value('position') || '2',
+            depth: value('depth') || '2',
+            order: value('order') || '100'
+        };
+    });
+}
+
+function renderCustomWorldbookEntries(entries) {
+    const container = document.getElementById('custom-worldbook-container');
+    if (!container) return;
+    container.innerHTML = '';
+    (Array.isArray(entries) ? entries : []).forEach(entry => {
+        container.appendChild(createCustomWorldbookEntryElement(entry));
+    });
+    updateCustomWorldbookEmptyState();
+}
+
+function addCustomWorldbookEntry() {
+    const container = document.getElementById('custom-worldbook-container');
+    if (!container) return;
+    const item = createCustomWorldbookEntryElement();
+    container.appendChild(item);
+    updateCustomWorldbookEmptyState();
+    item.querySelector('[data-field="title"]')?.focus();
+    triggerAutoSave();
+}
+
 function serializeForm() {
     const data = {};
     SIMPLE_IDS.forEach(id => {
@@ -147,6 +275,7 @@ function serializeForm() {
             data[cid] = Array.from(container.querySelectorAll('.' + cls)).map(el => el.value);
         }
     });
+    data.customWorldbookEntries = collectCustomWorldbookEntries();
     return data;
 }
 
@@ -194,6 +323,7 @@ function deserializeForm(data) {
             container.appendChild(div);
         });
     });
+    renderCustomWorldbookEntries(data.customWorldbookEntries);
 }
 
 function clearFormFields() {
@@ -214,6 +344,7 @@ function clearFormFields() {
         }
         container.appendChild(div);
     });
+    renderCustomWorldbookEntries([]);
 }
 
 function saveCurrentCharData(id) {
